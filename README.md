@@ -136,7 +136,7 @@ E-Finance/
 
 ```bash
 # Clone and setup
-git clone <repo-url>
+git clone https://github.com/Eng-Zakaria/E-Finance.git
 cd E-Finance
 
 # Start all services
