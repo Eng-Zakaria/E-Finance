@@ -155,8 +155,3 @@ docker-compose up -d
 - [Architecture Guide](./docs/architecture.md)
 - [Deployment Guide](./docs/deployment.md)
 - [Security Guide](./docs/security.md)
-
-## License
-
-MIT License - See [LICENSE](./LICENSE) for details.
-
