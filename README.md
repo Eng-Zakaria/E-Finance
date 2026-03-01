@@ -6,19 +6,19 @@ A comprehensive digital banking platform with Web3 integration, fraud detection,
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              E-Finance Platform                                   │
+│                              E-Finance Platform                                 │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │   Web App   │  │ Mobile App  │  │  Admin UI   │  │ Partner API │            │
-│  │   (React)   │  │  (Future)   │  │   (React)   │  │   Gateway   │            │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │   Web App   │  │ Mobile App  │  │  Admin UI   │  │ Partner API │             │
+│  │   (React)   │  │  (Future)   │  │   (React)   │  │   Gateway   │             │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │
 │         │                │                │                │                    │
-│  ┌──────┴────────────────┴────────────────┴────────────────┴──────┐            │
-│  │                         API Gateway (Kong)                       │            │
+│  ┌──────┴────────────────┴────────────────┴────────────────┴───────┐            │
+│  │                         API Gateway (Kong)                      │            │
 │  └──────────────────────────────────┬──────────────────────────────┘            │
-│                                     │                                            │
+│                                     │                                           │
 │  ┌──────────────────────────────────┴──────────────────────────────┐            │
-│  │                      Microservices Layer                         │            │
+│  │                      Microservices Layer                        │            │
 │  ├────────────────┬────────────────┬────────────────┬──────────────┤            │
 │  │  Core Banking  │  Transaction   │     Fraud      │    Web3      │            │
 │  │  API (Python)  │ Service (Java) │ Detection (ML) │  Blockchain  │            │
@@ -26,16 +26,16 @@ A comprehensive digital banking platform with Web3 integration, fraud detection,
 │  │   Analytics    │   Notification │     BNPL       │   Payment    │            │
 │  │    (Spark)     │    Service     │   Service      │   Gateway    │            │
 │  └────────────────┴────────────────┴────────────────┴──────────────┘            │
-│                                     │                                            │
+│                                     │                                           │
 │  ┌──────────────────────────────────┴──────────────────────────────┐            │
-│  │                         Data Layer                               │            │
+│  │                         Data Layer                              │            │
 │  ├────────────┬────────────┬────────────┬────────────┬─────────────┤            │
 │  │ PostgreSQL │  MongoDB   │   Redis    │ Elasticsearch│   Kafka   │            │
 │  │  (Core DB) │ (Documents)│  (Cache)   │  (Search)    │ (Events)  │            │
 │  └────────────┴────────────┴────────────┴────────────┴─────────────┘            │
-│                                     │                                            │
+│                                     │                                           │
 │  ┌──────────────────────────────────┴──────────────────────────────┐            │
-│  │                    Orchestration Layer                           │            │
+│  │                    Orchestration Layer                          │            │
 │  ├────────────────────────┬────────────────────────────────────────┤            │
 │  │    Apache Airflow      │         Kubernetes / Docker            │            │
 │  │   (Data Pipelines)     │        (Container Orchestration)       │            │
