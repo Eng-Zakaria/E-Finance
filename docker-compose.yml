@@ -1,0 +1,317 @@
+version: '3.8'
+
+services:
+  # ===================
+  # DATABASES
+  # ===================
+  postgres:
+    image: postgres:16-alpine
+    container_name: efinance-postgres
+    environment:
+      POSTGRES_USER: efinance
+      POSTGRES_PASSWORD: efinance123
+      POSTGRES_DB: efinance_core
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./databases/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U efinance"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - efinance-network
+
+  mongodb:
+    image: mongo:7
+    container_name: efinance-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: efinance
+      MONGO_INITDB_ROOT_PASSWORD: efinance123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - efinance-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: efinance-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - efinance-network
+
+  # ===================
+  # MESSAGE QUEUE
+  # ===================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: efinance-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - efinance-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: efinance-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - efinance-network
+
+  # ===================
+  # PYTHON SERVICES
+  # ===================
+  core-banking-api:
+    build:
+      context: ./services/core-banking-api
+      dockerfile: Dockerfile
+    container_name: efinance-core-api
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=efinance
+      - POSTGRES_PASSWORD=efinance123
+      - POSTGRES_DB=efinance_core
+      - MONGODB_URI=mongodb://efinance:efinance123@mongodb:27017
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - efinance-network
+
+  fraud-detection:
+    build:
+      context: ./services/fraud-detection
+      dockerfile: Dockerfile
+    container_name: efinance-fraud
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://efinance:efinance123@postgres:5432/efinance_fraud
+      - REDIS_URL=redis://redis:6379/1
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - efinance-network
+
+  web3-service:
+    build:
+      context: ./services/web3-service
+      dockerfile: Dockerfile
+    container_name: efinance-web3
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://efinance:efinance123@postgres:5432/efinance_web3
+      - REDIS_URL=redis://redis:6379/2
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - efinance-network
+
+  bnpl-service:
+    build:
+      context: ./services/bnpl-service
+      dockerfile: Dockerfile
+    container_name: efinance-bnpl
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://efinance:efinance123@postgres:5432/efinance_bnpl
+      - REDIS_URL=redis://redis:6379/3
+      - MONGODB_URI=mongodb://efinance:efinance123@mongodb:27017
+    depends_on:
+      - postgres
+      - redis
+      - mongodb
+    networks:
+      - efinance-network
+
+  analytics-service:
+    build:
+      context: ./services/analytics-service
+      dockerfile: Dockerfile
+    container_name: efinance-analytics
+    ports:
+      - "8004:8004"
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres:5432/efinance_core
+      - POSTGRES_USER=efinance
+      - POSTGRES_PASSWORD=efinance123
+    depends_on:
+      - postgres
+    networks:
+      - efinance-network
+
+  # ===================
+  # JAVA SERVICE
+  # ===================
+  transaction-service:
+    build:
+      context: ./services/transaction-service
+      dockerfile: Dockerfile
+    container_name: efinance-transaction
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/efinance_transactions
+      - SPRING_DATASOURCE_USERNAME=efinance
+      - SPRING_DATASOURCE_PASSWORD=efinance123
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - efinance-network
+
+  # ===================
+  # AIRFLOW
+  # ===================
+  airflow-webserver:
+    image: apache/airflow:2.8.0-python3.11
+    container_name: efinance-airflow
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://efinance:efinance123@postgres:5432/efinance_airflow
+      - AIRFLOW__CORE__FERNET_KEY=your-fernet-key-here
+      - AIRFLOW__WEBSERVER__SECRET_KEY=your-secret-key-here
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    command: webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - efinance-network
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.0-python3.11
+    container_name: efinance-airflow-scheduler
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://efinance:efinance123@postgres:5432/efinance_airflow
+      - AIRFLOW__CORE__FERNET_KEY=your-fernet-key-here
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    command: scheduler
+    depends_on:
+      - airflow-webserver
+    networks:
+      - efinance-network
+
+  # ===================
+  # FRONTEND
+  # ===================
+  frontend:
+    build:
+      context: ./frontend/web-app
+      dockerfile: Dockerfile
+    container_name: efinance-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - core-banking-api
+    networks:
+      - efinance-network
+
+  # ===================
+  # MONITORING
+  # ===================
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: efinance-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - efinance-network
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: efinance-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - efinance-network
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  airflow_logs:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  efinance-network:
+    driver: bridge
+

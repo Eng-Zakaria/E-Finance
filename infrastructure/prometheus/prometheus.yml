@@ -1,0 +1,46 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'core-banking-api'
+    static_configs:
+      - targets: ['core-banking-api:8000']
+    metrics_path: '/metrics'
+
+  - job_name: 'fraud-detection'
+    static_configs:
+      - targets: ['fraud-detection:8001']
+    metrics_path: '/metrics'
+
+  - job_name: 'web3-service'
+    static_configs:
+      - targets: ['web3-service:8002']
+    metrics_path: '/metrics'
+
+  - job_name: 'bnpl-service'
+    static_configs:
+      - targets: ['bnpl-service:8003']
+    metrics_path: '/metrics'
+
+  - job_name: 'analytics-service'
+    static_configs:
+      - targets: ['analytics-service:8004']
+    metrics_path: '/metrics'
+
+  - job_name: 'transaction-service'
+    static_configs:
+      - targets: ['transaction-service:8080']
+    metrics_path: '/actuator/prometheus'
+

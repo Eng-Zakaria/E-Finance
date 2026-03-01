@@ -1,0 +1,42 @@
+# Web3/Blockchain Service Dependencies
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+httpx==0.26.0
+
+# Web3/Blockchain
+web3==6.14.0
+eth-account==0.10.0
+eth-typing==3.5.2
+eth-utils==2.3.1
+py-solc-x==2.0.2
+
+# Bitcoin
+bitcoinlib==0.6.14
+
+# Cryptography
+cryptography==41.0.7
+pycryptodome==3.19.1
+
+# Database
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+
+# Kafka
+aiokafka==0.10.0
+
+# Monitoring
+prometheus-client==0.19.0
+structlog==24.1.0
+
+# Utils
+python-dateutil==2.8.2
+aiohttp==3.9.1
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+
